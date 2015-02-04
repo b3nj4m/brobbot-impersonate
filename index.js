@@ -2,7 +2,6 @@
 //  Impersonate a user using Markov chains
 //
 //Dependencies:
-//  markov-respond: ~6.0.0
 //  underscore: ~1.7.0
 //
 //Configuration:
@@ -19,7 +18,7 @@
 //Author:
 //  b3nj4m
 
-var Markov = require('markov-respond');
+var Markov = require('./markov');
 var _ = require('underscore');
 
 var MIN_WORDS = process.env.HUBOT_IMPERSONATE_MIN_WORDS ? parseInt(process.env.HUBOT_IMPERSONATE_MIN_WORDS) : 1;
