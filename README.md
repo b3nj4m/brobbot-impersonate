@@ -13,7 +13,7 @@ Brobbot: pizza is super
 
 ### Model
 
-Currently uses simple Markov chain based on [markov-respond](https://github.com/b3nj4m/node-markov). I'm using [msgpack](https://npmjs.org/package/msgpack) to store the model efficiently.
+Currently uses simple Markov chain based on [markov-respond](https://github.com/b3nj4m/node-markov).
 
 ### Configuration
 
