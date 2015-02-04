@@ -1,0 +1,28 @@
+{
+  "name": "brobbot-impersonate",
+  "version": "2.0.0",
+  "description": "Enable Brobbot to learn from chat history and impersonate users.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/b3nj4m/brobbot-impersonate"
+  },
+  "keywords": [
+    "brobbot"
+  ],
+  "author": "Ben Robbins <ben.robbins@gmail.com> (https://b3nj4m.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/b3nj4m/brobbot-impersonate/issues"
+  },
+  "peerDependencies": {
+    "brobbot": "3.x"
+  },
+  "dependencies": {
+    "markov-respond": "~7.0.0",
+    "underscore": "~1.7.0"
+  }
+}
