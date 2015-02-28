@@ -17,28 +17,12 @@ Currently uses simple Markov chain based on [markov-respond](https://github.com/
 
 ### Configuration
 
-#### Operation mode
+#### Maximum number of unique words
 
-Set the mode of operation (default 'train'). Can be one of 'train', 'respond', 'train_respond'.
-
-```
-BROBBOT_IMPERSONATE_MODE=mode
-```
-
-#### Minimum number of words
-
-Ignore messages with fewer than `N` words (default 1).
+Limit the size of the Markov chain (it grows very quickly) to `N` unique words per-user (default 250).
 
 ```
-BROBBOT_IMPERSONATE_MIN_WORDS=N
-```
-
-#### Initialization timeout
-
-Wait for N milliseconds for brobbot to initialize and load brain data from redis. (default 10000)
-
-```
-BROBBOT_IMPERSONATE_INIT_TIMEOUT=N
+BROBBOT_IMPERSONATE_MAX_WORDS=N
 ```
 
 #### Case sensitivity
