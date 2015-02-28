@@ -19,7 +19,7 @@
     "url": "https://github.com/b3nj4m/brobbot-impersonate/issues"
   },
   "peerDependencies": {
-    "brobbot": "3.x"
+    "brobbot": "4.x"
   },
   "dependencies": {
     "underscore": "~1.7.0"

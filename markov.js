@@ -1,42 +1,43 @@
 var _ = require('underscore');
 var Q = require('q');
 
-function Markov(robot, minimumWords, caseSensitive, stripPunctuation) {
+function Markov(robot, caseSensitive, stripPunctuation, limit) {
   this.robot = robot;
-  this.minimumWords = minimumWords || 1;
   this.caseSensitive = !!caseSensitive;
   this.stripPunctuation = !!stripPunctuation;
+  this.limit = limit;
 }
   
 //update the model using the supplied string
 Markov.prototype.train = function(str, userId) {
   var text = (Buffer.isBuffer(str) ? str.toString() : str)
   var words = this.wordsFromText(text);
+  var self = this;
 
-  var word;
-  var next;
-  var prev;
-  var node;
+  return this.robot.brain.scard(key(userId, 'words')).then(function(size) {
+    var ops = [];
+    var word;
+    var next;
+    var prev;
+    var node;
 
-  var ops = [];
+    if (size < self.limit - words.length) {
+      for (var i = 0; i < words.length; i++) {
+        word = words[i];
+        next = words[i + 1] || '';
+        prev = words[i - 1] || '';
 
-  //ignore text with fewer than `minimumWords` words
-  if (words.length >= this.minimumWords) {
-    for (var i = 0; i < words.length; i++) {
-      word = words[i];
-      next = words[i + 1] || '';
-      prev = words[i - 1] || '';
-
-      ops.push(this.robot.brain.sadd(key(userId, 'words'), word));
-      ops.push(this.robot.brain.incrby(key(userId, word, 'count'), 1));
-      ops.push(this.robot.brain.hincrby(key(userId, word, 'next', 'counts'), next, 1));
-      ops.push(this.robot.brain.sadd(key(userId, word, 'next'), next));
-      ops.push(this.robot.brain.hincrby(key(userId, word, 'prev', 'counts'), prev, 1));
-      ops.push(this.robot.brain.sadd(key(userId, word, 'prev'), prev));
+        ops.push(self.robot.brain.sadd(key(userId, 'words'), word));
+        ops.push(self.robot.brain.incrby(key(userId, word, 'count'), 1));
+        ops.push(self.robot.brain.hincrby(key(userId, word, 'next', 'counts'), next, 1));
+        ops.push(self.robot.brain.sadd(key(userId, word, 'next'), next));
+        ops.push(self.robot.brain.hincrby(key(userId, word, 'prev', 'counts'), prev, 1));
+        ops.push(self.robot.brain.sadd(key(userId, word, 'prev'), prev));
+      }
     }
-  }
 
-  return Q.all(ops);
+    return Q.all(ops);
+  });
 };
 
 //compute a node's weight using its count. uses ln(count) to prevent some nodes from being highly favored
@@ -70,6 +71,8 @@ Markov.prototype.randomWord = function(words, counts, favorWords) {
   var maxSample = 0;
   var sample;
 
+  var favorWordsTable = mapObject(favorWords, _.constant(true));
+
   return _.reduce(words, function(memo, word, idx) {
     //TODO tweak
     sample = Math.random() * self.computeWeight(counts[idx]) * (favorWordsTable[word] ? 2 : 1);
@@ -95,8 +98,6 @@ Markov.prototype.pickWord = function(favorWords, userId) {
       favorWords = [];
     }
 
-    var favorWordsTable = mapObject(favorWords, _.constant(true));
-
     return Q.all(_.map(words, function(word) {
       return self.robot.brain.get(key(userId, word, 'count'));
     })).then(function(counts) {
@@ -111,7 +112,7 @@ Markov.prototype.next = function(word, userId) {
 
   return this.robot.brain.smembers(key(userId, word, 'next')).then(function(words) {
     return Q.all(_.map(words, function(nextWord) {
-      return self.robot.brain.get(key(userId, word, 'next', 'counts'), nextWord);
+      return self.robot.brain.hget(key(userId, word, 'next', 'counts'), nextWord);
     })).then(function(counts) {
       return self.randomWord(words, counts);
     });
@@ -124,7 +125,7 @@ Markov.prototype.prev = function(word, userId) {
 
   return this.robot.brain.smembers(key(userId, word, 'prev')).then(function(words) {
     return Q.all(_.map(words, function(prevWord) {
-      return self.robot.brain.get(key(userId, word, 'prev', 'counts'), prevWord);
+      return self.robot.brain.hget(key(userId, word, 'prev', 'counts'), prevWord);
     })).then(function(counts) {
       return self.randomWord(words, counts);
     });
@@ -180,9 +181,10 @@ Markov.prototype.fill = function(word, limit, userId) {
 
 //construct a response to `text` with at most `limit` words
 Markov.prototype.respond = function(text, limit, userId) {
+  var self = this;
   limit = limit || 25;
   return this.search(text, userId).then(function(word) {
-    return this.fill(word, limit, userId);
+    return self.fill(word, limit, userId);
   });
 };
 
