@@ -1,6 +1,6 @@
 {
   "name": "brobbot-impersonate",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Enable Brobbot to learn from chat history and impersonate users.",
   "main": "index.js",
   "scripts": {
