@@ -42,7 +42,8 @@ Markov.prototype.train = function(str, userId) {
 
 //compute a node's weight using its count. uses ln(count) to prevent some nodes from being highly favored
 Markov.prototype.computeWeight = function(count) {
-  return Math.log(count) + 1;
+  //TODO tweak
+  return 10 * (Math.log(count) + 1);
 };
 
 //break a string into words, and remove punctuation, etc.
@@ -184,9 +185,30 @@ Markov.prototype.respond = function(text, userId, limit) {
   var self = this;
   limit = limit || 25;
   return this.search(text, userId).then(function(word) {
-    return self.fill(word, limit, userId);
+    return self.fill(word, limit, userId).then(function(str) {
+      return sanitize(str);
+    });
   });
 };
+
+function sanitize(s) {
+  //remove unmatch double-quotes
+  var open = null;
+  for (var i = 0; i < s.length; i++) {
+    if (s.charAt(i) === '"') {
+      if (open === null) {
+        open = i;
+      }
+      else {
+        open = null;
+      }
+    }
+  }
+  if (open !== null) {
+    return s.substring(0, open) + s.substring(open + 1);
+  }
+  return s;
+}
 
 //clean a string
 function clean(s) {
