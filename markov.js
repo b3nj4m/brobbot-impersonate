@@ -205,8 +205,12 @@ function sanitize(s) {
     }
   }
   if (open !== null) {
-    return s.substring(0, open) + s.substring(open + 1);
+    s = s.substring(0, open) + s.substring(open + 1);
   }
+
+  //remove trailing commas
+  s = s.replace(/,$/, '');
+
   return s;
 }
 
