@@ -1,5 +1,8 @@
 var _ = require('underscore');
 var Q = require('q');
+var pos = require('pos');
+
+var tagger = new pos.Tagger();
 
 function Markov(robot, caseSensitive, stripPunctuation, limit) {
   this.robot = robot;
@@ -63,7 +66,16 @@ Markov.prototype.wordsFromText = function(text) {
 
 //pick a word from the model, favoring words that appear in `text`
 Markov.prototype.search = function(text, userId) {
-  return this.pickWord(this.wordsFromText(text), userId);
+  return this.pickWord(this.importantWords(this.wordsFromText(text)), userId);
+};
+
+Markov.prototype.importantWords = function(words) {
+  //extract nouns and verbs from the word list
+  return _.filter(tagger.tag(words), function(item) {
+    return /^(NN|VB)/.test(item[1]);
+  }).map(function(item) {
+    return item[0];
+  });
 };
   
 Markov.prototype.randomWord = function(words, counts, favorWords) {
@@ -76,7 +88,7 @@ Markov.prototype.randomWord = function(words, counts, favorWords) {
 
   return _.reduce(words, function(memo, word, idx) {
     //TODO tweak
-    sample = Math.random() * self.computeWeight(counts[idx]) * (favorWordsTable[word] ? 2 : 1);
+    sample = Math.random() * self.computeWeight(counts[idx]) * (favorWordsTable[word] ? 10 : 1);
 
     if (sample > maxSample) {
       memo = word;
