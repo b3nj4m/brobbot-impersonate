@@ -10,6 +10,10 @@ function Markov(robot, caseSensitive, stripPunctuation, limit) {
   this.stripPunctuation = !!stripPunctuation;
   this.limit = limit;
 }
+
+Markov.prototype.exists = function(userId) {
+  return this.robot.brain.exists(key(userId, 'words'));
+};
   
 //update the model using the supplied string
 Markov.prototype.train = function(str, userId) {
@@ -197,9 +201,12 @@ Markov.prototype.respond = function(text, userId, limit) {
   var self = this;
   limit = limit || 25;
   return this.search(text, userId).then(function(word) {
-    return self.fill(word, limit, userId).then(function(str) {
-      return sanitize(str);
-    });
+    if (word) {
+      return self.fill(word, limit, userId).then(function(str) {
+        return sanitize(str);
+      });
+    }
+    return '';
   });
 };
 
