@@ -41,6 +41,14 @@ Whether to strip punctuation/symbols from messages. (default false)
 BROBBOT_IMPERSONATE_STRIP_PUNCTUATION=true|false
 ```
 
+#### Default response
+
+The default response to use if the markov chain produces an empty string. (default `'...'`)
+
+```
+BROBBOT_IMPERSONATE_DEFAULT_RESPONSE="something clever"
+```
+
 ### Commands
 
 #### Impersonate
