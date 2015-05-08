@@ -33,6 +33,12 @@ function start(robot) {
     return !!impersonating;
   }
 
+  function respond(msg, message) {
+    return robot.brain.userForId(impersonating).then(function(user) {
+      msg.send((user ? user.name + 'bot: ' : '') + (message === '' ? DEFAULT_RESPONSE : message));
+    });
+  }
+
   robot.respond(/^impersonate ([^\s]+)/i, function(msg) {
     var username = msg.match[1];
     var text = msg.message.text;
@@ -47,7 +53,7 @@ function start(robot) {
             msg.send('impersonating ' + user.name);
 
             return markov.respond(lastMessageText || 'beans', impersonating).then(function(message) {
-              msg.send(message === '' ? DEFAULT_RESPONSE : message);
+              return respond(msg, message);
             });
           }
           msg.send("I haven't heard " + user.name + " say anything!");
@@ -87,7 +93,7 @@ function start(robot) {
 
       if (shouldRespond()) {
         return markov.respond(text, impersonating).then(function(message) {
-          msg.send(message === '' ? DEFAULT_RESPONSE : message);
+          return respond(msg, message);
         });
       }
     }

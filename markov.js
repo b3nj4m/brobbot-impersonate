@@ -199,7 +199,7 @@ Markov.prototype.fill = function(word, limit, userId) {
 //construct a response to `text` with at most `limit` words
 Markov.prototype.respond = function(text, userId, limit) {
   var self = this;
-  limit = limit || 25;
+  limit = limit || 15;
   return this.search(text, userId).then(function(word) {
     if (word) {
       return self.fill(word, limit, userId).then(function(str) {
