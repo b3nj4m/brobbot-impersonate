@@ -86,7 +86,7 @@ function start(robot) {
   robot.hear(/.*/, function(msg) {
     var text = msg.message.text;
 
-    if (text && !msg.message.isAddressedToBrobbot) {
+    if (text && !msg.message.isBrobbotCommand) {
       lastMessageText = text;
 
       markov.train(text, msg.message.user.id);
