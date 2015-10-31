@@ -52,6 +52,7 @@ BROBBOT_IMPERSONATE_DEFAULT_RESPONSE="something clever"
 #### Order
 
 The order of the markov chain (positive int). Higher order will produce responses closer to the input text. (default 1)
+Changing the order will invalidate your existing model!
 
 ```
 BROBBOT_IMPERSONATE_ORDER=2
