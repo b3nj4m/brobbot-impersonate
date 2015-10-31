@@ -4,15 +4,16 @@ var pos = require('pos');
 
 var tagger = new pos.Tagger();
 
-function Markov(robot, caseSensitive, stripPunctuation, limit) {
+function Markov(robot, caseSensitive, stripPunctuation, limit, order) {
   this.robot = robot;
   this.caseSensitive = !!caseSensitive;
   this.stripPunctuation = !!stripPunctuation;
   this.limit = limit;
+  this.order = Math.max(1, order);
 }
 
 Markov.prototype.exists = function(userId) {
-  return this.robot.brain.exists(key(userId, 'words'));
+  return this.robot.brain.exists(key(userId, 'grams'));
 };
   
 //update the model using the supplied string
@@ -21,25 +22,25 @@ Markov.prototype.train = function(str, userId) {
   var words = this.wordsFromText(text);
   var self = this;
 
-  return this.robot.brain.scard(key(userId, 'words')).then(function(size) {
+  return this.robot.brain.scard(key(userId, 'grams')).then(function(size) {
     var ops = [];
-    var word;
+    var gram;
     var next;
     var prev;
     var node;
 
     if (size < self.limit - words.length) {
       for (var i = 0; i < words.length; i++) {
-        word = words[i];
-        next = words[i + 1] || '';
+        gram = words.slice(i, i + this.order).join(' ');
+        next = words[i + this.order] || '';
         prev = words[i - 1] || '';
 
-        ops.push(self.robot.brain.sadd(key(userId, 'words'), word));
-        ops.push(self.robot.brain.incrby(key(userId, word, 'count'), 1));
-        ops.push(self.robot.brain.hincrby(key(userId, word, 'next', 'counts'), next, 1));
-        ops.push(self.robot.brain.sadd(key(userId, word, 'next'), next));
-        ops.push(self.robot.brain.hincrby(key(userId, word, 'prev', 'counts'), prev, 1));
-        ops.push(self.robot.brain.sadd(key(userId, word, 'prev'), prev));
+        ops.push(self.robot.brain.sadd(key(userId, 'grams'), gram));
+        ops.push(self.robot.brain.incrby(key(userId, gram, 'count'), 1));
+        ops.push(self.robot.brain.hincrby(key(userId, gram, 'next', 'counts'), next, 1));
+        ops.push(self.robot.brain.sadd(key(userId, gram, 'next'), next));
+        ops.push(self.robot.brain.hincrby(key(userId, gram, 'prev', 'counts'), prev, 1));
+        ops.push(self.robot.brain.sadd(key(userId, gram, 'prev'), prev));
       }
     }
 
@@ -47,10 +48,10 @@ Markov.prototype.train = function(str, userId) {
   });
 };
 
-//compute a node's weight using its count. uses ln(count) to prevent some nodes from being highly favored
+//compute a node's weight using its count
 Markov.prototype.computeWeight = function(count) {
   //TODO tweak
-  return 10 * (Math.log(count) + 1);
+  return count;
 };
 
 //break a string into words, and remove punctuation, etc.
@@ -68,18 +69,20 @@ Markov.prototype.wordsFromText = function(text) {
   return text.split(/\s+/);
 };
 
-//pick a word from the model, favoring words that appear in `text`
+//pick a word from the model, favoring grams that appear in `text`
 Markov.prototype.search = function(text, userId) {
-  return this.pickWord(this.importantWords(this.wordsFromText(text)), userId);
+  return this.pickGram(this.importantGrams(this.wordsFromText(text)), userId);
 };
 
-Markov.prototype.importantWords = function(words) {
+Markov.prototype.importantGrams = function(words) {
   //extract nouns and verbs from the word list
-  return _.filter(tagger.tag(words), function(item) {
+  return _.chain(tagger.tag(words)).map(function(item, idx) {
+    return [words.slice(idx, self.order).join(' '), item[1]];
+  }).filter(function(item, idx) {
     return /^(NN|VB)/.test(item[1]);
   }).map(function(item) {
     return item[0];
-  });
+  }).value();
 };
   
 Markov.prototype.randomWord = function(words, counts, favorWords) {
@@ -103,56 +106,56 @@ Markov.prototype.randomWord = function(words, counts, favorWords) {
   }, null);
 };
 
-//pick a word from `words`, optionally favoring words in `favorWords`
-Markov.prototype.pickWord = function(favorWords, userId) {
+//pick a gram from `grams`, optionally favoring grams in `favorGrams`
+Markov.prototype.pickGram = function(favorGrams, userId) {
   var self = this;
 
-  return this.robot.brain.smembers(key(userId, 'words')).then(function(words) {
-    if (favorWords) {
-      favorWords = _.intersection(words, favorWords)
+  return this.robot.brain.smembers(key(userId, 'grams')).then(function(grams) {
+    if (favorGrams) {
+      favorGrams = _.intersection(grams, favorGrams)
     }
     else {
-      favorWords = [];
+      favorGrams = [];
     }
 
-    return Q.all(_.map(words, function(word) {
-      return self.robot.brain.get(key(userId, word, 'count'));
+    return Q.all(_.map(grams, function(gram) {
+      return self.robot.brain.get(key(userId, gram, 'count'));
     })).then(function(counts) {
-      return self.randomWord(words, counts, favorWords);
+      return self.randomWord(grams, counts, favorGrams);
     });
   });
 };
 
-//pick a word to follow `word`
-Markov.prototype.next = function(word, userId) {
+//pick a word to follow `gram`
+Markov.prototype.next = function(gram, userId) {
   var self = this;
 
-  return this.robot.brain.smembers(key(userId, word, 'next')).then(function(words) {
+  return this.robot.brain.smembers(key(userId, gram, 'next')).then(function(words) {
     return Q.all(_.map(words, function(nextWord) {
-      return self.robot.brain.hget(key(userId, word, 'next', 'counts'), nextWord);
+      return self.robot.brain.hget(key(userId, gram, 'next', 'counts'), nextWord);
     })).then(function(counts) {
       return self.randomWord(words, counts);
     });
   });
 };
 
-//pick a word to precede `word`
-Markov.prototype.prev = function(word, userId) {
+//pick a word to precede `gram`
+Markov.prototype.prev = function(gram, userId) {
   var self = this;
 
-  return this.robot.brain.smembers(key(userId, word, 'prev')).then(function(words) {
+  return this.robot.brain.smembers(key(userId, gram, 'prev')).then(function(words) {
     return Q.all(_.map(words, function(prevWord) {
-      return self.robot.brain.hget(key(userId, word, 'prev', 'counts'), prevWord);
+      return self.robot.brain.hget(key(userId, gram, 'prev', 'counts'), prevWord);
     })).then(function(counts) {
       return self.randomWord(words, counts);
     });
   });
 };
 
-//construct a sentence starting from `word`, with at most `limit` words
-Markov.prototype.fill = function(word, limit, userId) {
+//construct a sentence starting from `gram`, with at most `limit` words
+Markov.prototype.fill = function(gram, limit, userId) {
   var self = this;
-  var response = [word];
+  var response = gram.split(' ');
 
   if (!response[0]) {
     return [];
@@ -162,30 +165,27 @@ Markov.prototype.fill = function(word, limit, userId) {
     return response;
   }
   
-  var previousWord = word;
-  var nextWord = word;
-  
-  var previous = function(previousWord) {
-    return self.prev(previousWord, userId).then(function(previousWord) {
+  var previous = function(previousGram) {
+    return self.prev(previousGram, userId).then(function(previousWord) {
       if (previousWord) {
         response.unshift(previousWord);
       }
       if (previousWord && (!limit || response.length < limit)) {
-        return previous(previousWord);
+        return previous(response.slice(0, self.order).join(' '));
       }
       else {
-        return next(nextWord);
+        return next(gram);
       }
     });
   };
     
-  var next = function(nextWord) {
-    return self.next(nextWord, userId).then(function(nextWord) {
+  var next = function(nextGram) {
+    return self.next(nextGram, userId).then(function(nextWord) {
       if (nextWord) {
         response.push(nextWord);
       }
       if (nextWord && (!limit || response.length < limit)) {
-        return next(nextWord);
+        return next(response.slice(response.length - self.order, response.length).join(' '));
       }
       else {
         return response.join(' ');
@@ -193,16 +193,16 @@ Markov.prototype.fill = function(word, limit, userId) {
     });
   };
 
-  return previous(previousWord);
+  return previous(gram);
 };
 
 //construct a response to `text` with at most `limit` words
 Markov.prototype.respond = function(text, userId, limit) {
   var self = this;
   limit = limit || 15;
-  return this.search(text, userId).then(function(word) {
-    if (word) {
-      return self.fill(word, limit, userId).then(function(str) {
+  return this.search(text, userId).then(function(gram) {
+    if (gram) {
+      return self.fill(gram, limit, userId).then(function(str) {
         return sanitize(str);
       });
     }
