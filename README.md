@@ -49,6 +49,14 @@ The default response to use if the markov chain produces an empty string. (defau
 BROBBOT_IMPERSONATE_DEFAULT_RESPONSE="something clever"
 ```
 
+#### Order
+
+The order of the markov chain (positive int). Higher order will produce responses closer to the input text. (default 1)
+
+```
+BROBBOT_IMPERSONATE_ORDER=2
+```
+
 ### Commands
 
 #### Impersonate

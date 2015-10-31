@@ -13,7 +13,7 @@ function Markov(robot, caseSensitive, stripPunctuation, limit, order) {
 }
 
 Markov.prototype.exists = function(userId) {
-  return this.robot.brain.exists(key(userId, 'grams'));
+  return this.robot.brain.exists(key(userId, 'words'));
 };
   
 //update the model using the supplied string
@@ -22,7 +22,7 @@ Markov.prototype.train = function(str, userId) {
   var words = this.wordsFromText(text);
   var self = this;
 
-  return this.robot.brain.scard(key(userId, 'grams')).then(function(size) {
+  return this.robot.brain.scard(key(userId, 'words')).then(function(size) {
     var ops = [];
     var gram;
     var next;
@@ -35,7 +35,7 @@ Markov.prototype.train = function(str, userId) {
         next = words[i + self.order] || '';
         prev = words[i - 1] || '';
 
-        ops.push(self.robot.brain.sadd(key(userId, 'grams'), gram));
+        ops.push(self.robot.brain.sadd(key(userId, 'words'), gram));
         ops.push(self.robot.brain.incrby(key(userId, gram, 'count'), 1));
         ops.push(self.robot.brain.hincrby(key(userId, gram, 'next', 'counts'), next, 1));
         ops.push(self.robot.brain.sadd(key(userId, gram, 'next'), next));
@@ -112,7 +112,7 @@ Markov.prototype.randomWord = function(words, counts, favorWords) {
 Markov.prototype.pickGram = function(favorGrams, userId) {
   var self = this;
 
-  return this.robot.brain.smembers(key(userId, 'grams')).then(function(grams) {
+  return this.robot.brain.smembers(key(userId, 'words')).then(function(grams) {
     if (favorGrams) {
       favorGrams = _.intersection(grams, favorGrams)
     }
