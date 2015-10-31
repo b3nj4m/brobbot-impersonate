@@ -30,9 +30,9 @@ Markov.prototype.train = function(str, userId) {
     var node;
 
     if (size < self.limit - words.length) {
-      for (var i = 0; i < words.length; i++) {
-        gram = words.slice(i, i + this.order).join(' ');
-        next = words[i + this.order] || '';
+      for (var i = 0; i < words.length - self.order + 1; i++) {
+        gram = words.slice(i, i + self.order).join(' ');
+        next = words[i + self.order] || '';
         prev = words[i - 1] || '';
 
         ops.push(self.robot.brain.sadd(key(userId, 'grams'), gram));
