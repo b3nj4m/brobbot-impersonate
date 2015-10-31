@@ -75,6 +75,8 @@ Markov.prototype.search = function(text, userId) {
 };
 
 Markov.prototype.importantGrams = function(words) {
+  var self = this;
+
   //extract nouns and verbs from the word list
   return _.chain(tagger.tag(words)).map(function(item, idx) {
     return [words.slice(idx, self.order).join(' '), item[1]];
