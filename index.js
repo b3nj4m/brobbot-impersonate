@@ -15,7 +15,10 @@
 //  b3nj4m
 
 var Markov = require('./markov');
+var wikiQuotes = require('./wiki');
 var _ = require('underscore');
+var https = require('https');
+var Url = require('url');
 
 var MAX_WORDS = process.env.BROBBOT_IMPERSONATE_MAX_WORDS ? parseInt(process.env.BROBBOT_IMPERSONATE_MAX_WORDS) : 250;
 var CASE_SENSITIVE = (!process.env.BROBBOT_IMPERSONATE_CASE_SENSITIVE || process.env.BROBBOT_IMPERSONATE_CASE_SENSITIVE === 'false') ? false : true;
@@ -41,9 +44,9 @@ function start(robot) {
     });
   }
 
-  robot.respond(/^impersonate ([^\s]+)/i, function(msg) {
+  robot.respond(/^impersonate ([^\s]+)(.*)/i, function(msg) {
     var username = msg.match[1];
-    var text = msg.message.text;
+    var text = msg.match[2];
 
     return robot.brain.usersForFuzzyName(username).then(function(users) {
       if (users && users.length > 0) {
@@ -62,7 +65,27 @@ function start(robot) {
         });
       }
       else {
-        msg.send("I don't know any " + username + ".");
+        //search for the subject on wikiquote and create a markov chain, store using the subject as the ID
+        var subject = username + text;
+        return wikiQuotes(subject).then(function (quotes) {
+          if (quotes.length) {
+            impersonating = subject;
+            msg.send('impersonating ' + subject);
+
+            var trains = Q.all(quotes.map(function (quote) {
+              return markov.train(quote, subject);
+            }));
+
+            return trains.then(function () {
+              return markov.respond(lastMessageText || 'beans', impersonating).then(function (message) {
+                return respond(msg, message);
+              });
+            });
+          }
+          else {
+            return msg.send('who?');
+          }
+        });
       }
     });
   });

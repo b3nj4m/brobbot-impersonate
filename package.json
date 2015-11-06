@@ -24,8 +24,9 @@
     "brobbot": "4.x - 6.x"
   },
   "dependencies": {
+    "cheerio": "^0.19.0",
     "pos": "^0.1.9",
-    "q": "^1.2.0",
+    "q": "^1.4.1",
     "underscore": "~1.7.0"
   }
 }
