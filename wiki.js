@@ -30,7 +30,7 @@ function search (subject) {
   parsed.query.srlimit = 10;
 
   return get(parsed.format()).then(function(data) {
-    return data.query.search[0];
+    return data.query.search[0].title;
   });
 }
 
@@ -47,7 +47,7 @@ function quotes (subject) {
       var $ = cheerio.load(html);
       var uls = $('#Quotes').parent().nextUntil('h2', 'ul');
       uls.find('ul').remove();
-      return uls.find('li').slice(0, 10).map(function () {
+      return uls.find('li').slice(0, 20).map(function () {
         return $(this).text();
       }).get();
     });

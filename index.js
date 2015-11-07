@@ -19,6 +19,7 @@ var wikiQuotes = require('./wiki');
 var _ = require('underscore');
 var https = require('https');
 var Url = require('url');
+var Q = require('q');
 
 var MAX_WORDS = process.env.BROBBOT_IMPERSONATE_MAX_WORDS ? parseInt(process.env.BROBBOT_IMPERSONATE_MAX_WORDS) : 250;
 var CASE_SENSITIVE = (!process.env.BROBBOT_IMPERSONATE_CASE_SENSITIVE || process.env.BROBBOT_IMPERSONATE_CASE_SENSITIVE === 'false') ? false : true;
@@ -65,25 +66,37 @@ function start(robot) {
         });
       }
       else {
-        //search for the subject on wikiquote and create a markov chain, store using the subject as the ID
         var subject = username + text;
-        return wikiQuotes(subject).then(function (quotes) {
-          if (quotes.length) {
+        return markov.exists(subject).then(function (exists) {
+          if (exists) {
             impersonating = subject;
             msg.send('impersonating ' + subject);
 
-            var trains = Q.all(quotes.map(function (quote) {
-              return markov.train(quote, subject);
-            }));
-
-            return trains.then(function () {
-              return markov.respond(lastMessageText || 'beans', impersonating).then(function (message) {
-                return respond(msg, message);
-              });
+            return markov.respond(lastMessageText || 'beans', impersonating).then(function (message) {
+              return respond(msg, message);
             });
           }
           else {
-            return msg.send('who?');
+            //search for the subject on wikiquote and create a markov chain, store using the subject as the ID
+            return wikiQuotes(subject).then(function (quotes) {
+              if (quotes.length) {
+                impersonating = subject;
+                msg.send('impersonating ' + subject);
+
+                var trains = Q.all(quotes.map(function (quote) {
+                  return markov.train(quote, subject);
+                }));
+
+                return trains.then(function () {
+                  return markov.respond(lastMessageText || 'beans', impersonating).then(function (message) {
+                    return respond(msg, message);
+                  });
+                });
+              }
+              else {
+                return msg.send('who?');
+              }
+            });
           }
         });
       }

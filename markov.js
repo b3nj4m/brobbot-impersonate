@@ -201,7 +201,7 @@ Markov.prototype.fill = function(gram, limit, userId) {
 //construct a response to `text` with at most `limit` words
 Markov.prototype.respond = function(text, userId, limit) {
   var self = this;
-  limit = limit || 15;
+  limit = limit || 20;
   return this.search(text, userId).then(function(gram) {
     if (gram) {
       return self.fill(gram, limit, userId).then(function(str) {
